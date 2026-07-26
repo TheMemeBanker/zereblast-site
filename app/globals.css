@@ -1,0 +1,382 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0a0610;
+  --foreground: #e8e0f0;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-press-start);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: rgba(255, 45, 123, 0.35);
+  color: #fff;
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: #0a0610; }
+::-webkit-scrollbar-thumb { background: #8b2572; border-radius: 2px; }
+
+/* ==============================
+   GLITCH OVERLAY SYSTEM
+   JS-driven random color flashes
+   ============================== */
+.glitch-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 10000;
+  mix-blend-mode: screen;
+  opacity: 0;
+  transition: opacity 0.1s ease-out;
+}
+
+.glitch-overlay.glitch-active {
+  background: rgba(var(--glitch-color, 255, 0, 0), var(--glitch-opacity, 0.3));
+  box-shadow:
+    0 0 30px rgba(var(--glitch-color, 255, 0, 0), 0.6),
+    inset 0 0 60px rgba(var(--glitch-color, 255, 0, 0), 0.4);
+  opacity: var(--glitch-opacity, 0.3);
+  animation: glitch-flash 0.3s ease-out;
+}
+
+.glitch-overlay.rgb-shift {
+  animation: rgb-shift 0.1s ease-out;
+}
+
+@keyframes glitch-flash {
+  0% { opacity: var(--glitch-opacity, 0.3); filter: hue-rotate(0deg) brightness(1.2); }
+  25% { opacity: calc(var(--glitch-opacity, 0.3) * 1.2); filter: hue-rotate(90deg) brightness(1.4); }
+  50% { opacity: calc(var(--glitch-opacity, 0.3) * 0.8); filter: hue-rotate(180deg) brightness(1.1); }
+  75% { opacity: calc(var(--glitch-opacity, 0.3) * 1.1); filter: hue-rotate(270deg) brightness(1.3); }
+  100% { opacity: 0; filter: hue-rotate(360deg) brightness(1); }
+}
+
+@keyframes rgb-shift {
+  0% { box-shadow: -2px 0 0 rgba(255,0,0,0.5), 2px 0 0 rgba(0,255,255,0.5); transform: translateX(0); }
+  25% { box-shadow: -3px 0 0 rgba(255,0,0,0.5), 3px 0 0 rgba(0,255,255,0.5); transform: translateX(-1px); }
+  50% { box-shadow: -2px 0 0 rgba(255,0,0,0.5), 2px 0 0 rgba(0,255,255,0.5); transform: translateX(1px); }
+  75% { box-shadow: -3px 0 0 rgba(255,0,0,0.5), 3px 0 0 rgba(0,255,255,0.5); transform: translateX(-1px); }
+  100% { box-shadow: none; transform: translateX(0); }
+}
+
+/* Glitch clip-path pseudo elements */
+.glitch-overlay.glitch-active::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 0, 0, 0.1);
+  mix-blend-mode: screen;
+  animation: glitch-clip-before 0.2s;
+}
+
+.glitch-overlay.glitch-active::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 255, 255, 0.1);
+  mix-blend-mode: screen;
+  animation: glitch-clip-after 0.2s;
+}
+
+@keyframes glitch-clip-before {
+  0% { clip-path: inset(0 0 100% 0); }
+  20% { clip-path: inset(20% 0 60% 0); }
+  40% { clip-path: inset(40% 0 20% 0); }
+  60% { clip-path: inset(60% 0 0 0); }
+  80% { clip-path: inset(80% 0 0 0); }
+  100% { clip-path: inset(100% 0 0 0); }
+}
+
+@keyframes glitch-clip-after {
+  0% { clip-path: inset(100% 0 0 0); }
+  20% { clip-path: inset(80% 0 0 0); }
+  40% { clip-path: inset(60% 0 0 0); }
+  60% { clip-path: inset(40% 0 20% 0); }
+  80% { clip-path: inset(20% 0 60% 0); }
+  100% { clip-path: inset(0 0 100% 0); }
+}
+
+/* ==============================
+   SCANLINE SWEEP
+   Green line that sweeps top to bottom
+   ============================== */
+.scanline-sweep {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(180deg, transparent, rgba(0, 255, 0, 0.8), transparent);
+  pointer-events: none;
+  z-index: 10001;
+  opacity: 0;
+  transform: translateY(-100vh);
+  transition: opacity 0.3s ease-out;
+}
+
+.scanline-sweep.scanning {
+  opacity: 1;
+  animation: scanline-move 2s linear;
+}
+
+@keyframes scanline-move {
+  0% { transform: translateY(-100vh); }
+  100% { transform: translateY(100vh); }
+}
+
+/* ==============================
+   NOISE OVERLAY
+   SVG fractalNoise texture
+   ============================== */
+.noise-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+  animation: noise-flicker 0.1s infinite;
+}
+
+@keyframes noise-flicker {
+  0%, 100% { opacity: 0.03; filter: brightness(1); }
+  25% { opacity: 0.06; filter: brightness(1.1); }
+  50% { opacity: 0.04; filter: brightness(0.95); }
+  75% { opacity: 0.05; filter: brightness(1.05); }
+}
+
+/* ==============================
+   CRT SCANLINES (fine overlay)
+   ============================== */
+.crt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px, rgba(0, 0, 0, 0.03) 4px
+  );
+}
+
+/* ==============================
+   COIN — 3D Y-axis spin
+   ============================== */
+@keyframes coin-spin {
+  0% { transform: perspective(400px) rotateY(0deg); }
+  100% { transform: perspective(400px) rotateY(360deg); }
+}
+.coin-spin {
+  animation: coin-spin 2.5s linear infinite;
+  transform-style: preserve-3d;
+}
+
+/* ==============================
+   CHARACTER — subtle idle bounce
+   ============================== */
+@keyframes char-bounce {
+  0%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-2px); }
+  50% { transform: translateY(0); }
+  75% { transform: translateY(-3px); }
+}
+.char-bounce {
+  animation: char-bounce 1.8s steps(4) infinite;
+}
+
+/* ==============================
+   POWER UP — neon sign flicker
+   ============================== */
+@keyframes powerup-flicker {
+  0%, 100% { opacity: 0.3; }
+  4% { opacity: 0.7; }
+  8% { opacity: 0.15; }
+  12% { opacity: 0.6; }
+  20% { opacity: 0.3; }
+  50% { opacity: 0.4; }
+  52% { opacity: 0.1; }
+  54% { opacity: 0.8; }
+  60% { opacity: 0.3; }
+  80% { opacity: 0.5; }
+}
+.powerup-flicker {
+  animation: powerup-flicker 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ==============================
+   ARCADE MARQUEE — golden glow
+   ============================== */
+@keyframes marquee-glow {
+  0%, 100% { opacity: 0.3; }
+  15% { opacity: 0.6; }
+  30% { opacity: 0.25; }
+  50% { opacity: 0.7; }
+  65% { opacity: 0.2; }
+  80% { opacity: 0.5; }
+}
+.marquee-glow {
+  animation: marquee-glow 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Arcade screen flicker */
+@keyframes screen-flicker {
+  0%, 100% { opacity: 0.15; }
+  10% { opacity: 0.35; }
+  20% { opacity: 0.1; }
+  40% { opacity: 0.3; }
+  60% { opacity: 0.4; }
+  80% { opacity: 0.15; }
+  90% { opacity: 0.35; }
+}
+.screen-flicker {
+  animation: screen-flicker 1.5s steps(4) infinite;
+  pointer-events: none;
+}
+
+/* ==============================
+   AMBIENT NEON — scene breathes
+   ============================== */
+@keyframes neon-breathe {
+  0%, 100% { opacity: 0.15; }
+  30% { opacity: 0.3; }
+  60% { opacity: 0.2; }
+  80% { opacity: 0.35; }
+}
+.neon-breathe {
+  animation: neon-breathe 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes neon-breathe-alt {
+  0%, 100% { opacity: 0.1; }
+  20% { opacity: 0.25; }
+  50% { opacity: 0.35; }
+  70% { opacity: 0.15; }
+}
+.neon-breathe-alt {
+  animation: neon-breathe-alt 5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ==============================
+   TITLE + UI
+   ============================== */
+@keyframes title-glow {
+  0%, 100% {
+    text-shadow:
+      0 0 10px rgba(255, 255, 255, 0.7),
+      0 0 20px rgba(255, 255, 255, 0.5),
+      0 0 30px rgba(255, 255, 255, 0.3),
+      0 0 60px rgba(180, 77, 255, 0.2);
+    filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.3)) drop-shadow(0 0 50px rgba(180, 77, 255, 0.15));
+  }
+  50% {
+    text-shadow:
+      0 0 15px rgba(255, 255, 255, 0.9),
+      0 0 30px rgba(255, 255, 255, 0.7),
+      0 0 50px rgba(255, 255, 255, 0.4),
+      0 0 80px rgba(180, 77, 255, 0.3);
+    filter: drop-shadow(0 0 25px rgba(255, 255, 255, 0.6)) drop-shadow(0 0 70px rgba(180, 77, 255, 0.3));
+  }
+}
+.title-glow {
+  animation: title-glow 2.5s ease-in-out infinite;
+}
+
+@keyframes title-glow-intense {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 8px rgba(255, 255, 255, 0.5))
+      drop-shadow(0 0 25px rgba(255, 45, 123, 0.3))
+      drop-shadow(0 0 50px rgba(180, 77, 255, 0.2));
+  }
+  25% {
+    filter:
+      drop-shadow(0 0 15px rgba(255, 255, 255, 0.8))
+      drop-shadow(0 0 40px rgba(255, 45, 123, 0.5))
+      drop-shadow(0 0 80px rgba(180, 77, 255, 0.35));
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 10px rgba(255, 255, 255, 0.6))
+      drop-shadow(0 0 30px rgba(0, 240, 255, 0.4))
+      drop-shadow(0 0 60px rgba(255, 230, 68, 0.25));
+  }
+  75% {
+    filter:
+      drop-shadow(0 0 20px rgba(255, 255, 255, 0.9))
+      drop-shadow(0 0 50px rgba(57, 255, 20, 0.3))
+      drop-shadow(0 0 90px rgba(255, 45, 123, 0.4));
+  }
+}
+.title-glow-intense {
+  animation: title-glow-intense 3s ease-in-out infinite;
+}
+
+@keyframes coin-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.15; }
+}
+.coin-blink {
+  animation: coin-blink 0.8s step-end infinite;
+}
+
+/* Glowing text utility */
+.glow-text {
+  text-shadow:
+    0 0 10px rgba(255, 255, 255, 0.7),
+    0 0 20px rgba(255, 255, 255, 0.5),
+    0 0 30px rgba(255, 255, 255, 0.3);
+}
+
+/* ==============================
+   HUD EDGE GLOW — viewport border pulse
+   ============================== */
+@keyframes edge-glow {
+  0%, 100% { opacity: 0.15; }
+  25% { opacity: 0.3; }
+  50% { opacity: 0.1; }
+  75% { opacity: 0.25; }
+}
+
+/* Focus */
+a:focus-visible, button:focus-visible {
+  outline: 2px solid #ff2d7b;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coin-spin, .char-bounce, .powerup-flicker,
+  .marquee-glow, .screen-flicker, .neon-breathe,
+  .neon-breathe-alt, .title-glow, .coin-blink,
+  .noise-overlay, .scanline-sweep {
+    animation: none;
+  }
+  .glitch-overlay { display: none; }
+}
