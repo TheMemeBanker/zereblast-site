@@ -288,7 +288,7 @@ export default function Home() {
       <div className="absolute bottom-0 left-0 right-0 z-30 flex items-center justify-between px-3 sm:px-4 pb-3 sm:pb-4">
         {/* $ZEREBLAST */}
         <motion.a
-          href="https://pump.fun/coin/FT3Bozb8AV35XBkJprtxf28sk4JMqQV8d6MspSnCpump"
+          href="https://pump.fun/coin/AnTTVwu1mhybtbs4b1QqKEP1UziJyuYYYcnJoCSzpump"
           target="_blank"
           rel="noopener noreferrer"
           initial={{ opacity: 0 }}

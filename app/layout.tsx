@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Press_Start_2P } from "next/font/google";
 import "./globals.css";
+import SecretCode from "@/components/SecretCode";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -33,6 +34,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${pressStart.variable}`}>
       <body>
         {children}
+        <SecretCode />
       </body>
     </html>
   );
