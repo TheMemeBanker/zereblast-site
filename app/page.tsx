@@ -329,23 +329,6 @@ export default function Home() {
             @0xzerebro
           </motion.a>
           <motion.a
-            href="https://x.com/zereblast"
-            target="_blank"
-            rel="noopener noreferrer"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.35 }}
-            whileHover={{ opacity: 1, scale: 1.05 }}
-            transition={{ delay: 4.3, duration: 1 }}
-            className="text-[4px] sm:text-[6px] tracking-[0.2em] uppercase no-underline"
-            style={{
-              fontFamily: "var(--font-press-start)",
-              color: "#00f0ff",
-              textShadow: "0 0 6px rgba(0,240,255,0.4)",
-            }}
-          >
-            @zereblast
-          </motion.a>
-          <motion.a
             href="https://zerebro.org/"
             target="_blank"
             rel="noopener noreferrer"
