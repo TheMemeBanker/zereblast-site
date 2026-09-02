@@ -287,10 +287,10 @@ export default function Home() {
       {/* Bottom bar — token left, links right */}
       <div className="absolute bottom-0 left-0 right-0 z-30 flex items-center justify-between px-3 sm:px-4 pb-3 sm:pb-4">
         {/* $ZEREBLAST */}
+        {/* Unlinked pending a new token link (operator 2026-09-02) — keep the
+            wordmark in place; re-add href/target/rel when the link arrives. */}
         <motion.a
-          href="https://pump.fun/coin/AnTTVwu1mhybtbs4b1QqKEP1UziJyuYYYcnJoCSzpump"
-          target="_blank"
-          rel="noopener noreferrer"
+          data-token-link="PENDING"
           initial={{ opacity: 0 }}
           animate={{ opacity: 0.35 }}
           whileHover={{ opacity: 1, scale: 1.05 }}
