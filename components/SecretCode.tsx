@@ -16,7 +16,7 @@ import { useEffect, useState, useCallback } from "react";
  *
  * Kept in one place so the address can never drift between them.
  */
-const CA = "AnTTVwu1mhybtbs4b1QqKEP1UziJyuYYYcnJoCSzpump";
+const CA = "5djd3rpKMySfJCkZrUD13dnbfMP5aNYEaUsjH8CJpump";
 
 /** ↑ ↑ ↓ ↓ ← → ← → B A */
 const KONAMI = [
