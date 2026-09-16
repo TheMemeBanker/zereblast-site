@@ -288,7 +288,9 @@ export default function Home() {
       <div className="absolute bottom-0 left-0 right-0 z-30 flex items-center justify-between px-3 sm:px-4 pb-3 sm:pb-4">
         {/* $ZEREBLAST */}
         <motion.a
-          data-token-link="PENDING"
+          href="https://pump.fun/coin/4hMvdY7KbsCzHnRE7Js6kNFyTdkqKMeTv9GPYD5ppump"
+          target="_blank"
+          rel="noopener noreferrer"
           initial={{ opacity: 0 }}
           animate={{ opacity: 0.35 }}
           whileHover={{ opacity: 1, scale: 1.05 }}

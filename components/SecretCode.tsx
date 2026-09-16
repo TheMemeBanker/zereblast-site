@@ -16,10 +16,9 @@ import { useEffect, useState, useCallback } from "react";
  *
  * Kept in one place so the address can never drift between them.
  */
-// PENDING — the operator is supplying the next mint. When it arrives, set it
-// here AND re-link the footer wordmark (app/page.tsx, data-token-link marker)
-// in the same commit; these two surfaces must never drift.
-const CA = "";
+// Keep in lockstep with the footer wordmark link (app/page.tsx) — these two
+// surfaces must never drift. Verify any new mint via the pump.fun API first.
+const CA = "4hMvdY7KbsCzHnRE7Js6kNFyTdkqKMeTv9GPYD5ppump";
 
 /** ↑ ↑ ↓ ↓ ← → ← → B A */
 const KONAMI = [
