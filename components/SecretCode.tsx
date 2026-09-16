@@ -16,7 +16,10 @@ import { useEffect, useState, useCallback } from "react";
  *
  * Kept in one place so the address can never drift between them.
  */
-const CA = "5djd3rpKMySfJCkZrUD13dnbfMP5aNYEaUsjH8CJpump";
+// PENDING — the operator is supplying the next mint. When it arrives, set it
+// here AND re-link the footer wordmark (app/page.tsx, data-token-link marker)
+// in the same commit; these two surfaces must never drift.
+const CA = "";
 
 /** ↑ ↑ ↓ ↓ ← → ← → B A */
 const KONAMI = [
@@ -36,7 +39,7 @@ export default function SecretCode() {
       // eslint-disable-next-line no-console
       console.log("%c▛▀▘ ZEREBLAST // SYS.ONLINE ▝▀▟", style);
       // eslint-disable-next-line no-console
-      console.log("%c$ZEREBLAST CA  " + CA, "color:#00f0ff;font-size:12px");
+      console.log("%c$ZEREBLAST CA  " + (CA || "DROPS SOON"), "color:#00f0ff;font-size:12px");
       // eslint-disable-next-line no-console
       console.log("%c↑ ↑ ↓ ↓ ← → ← → B A", "color:#ff2d7b;font-size:11px");
     } catch {
@@ -75,6 +78,7 @@ export default function SecretCode() {
   }, []);
 
   const copy = useCallback(() => {
+    if (!CA) return; // pending state — nothing to copy
     try {
       void navigator.clipboard?.writeText(CA);
       setCopied(true);
@@ -129,11 +133,11 @@ export default function SecretCode() {
           style={{ borderColor: "rgba(57,255,20,.4)", color: "#39ff14", background: "rgba(57,255,20,.05)" }}
           title="Click to copy"
         >
-          {CA}
+          {CA || "CA DROPS SOON"}
         </button>
 
         <div className="mt-3 text-[10px]" style={{ color: copied ? "#39ff14" : "#8b8b9e" }}>
-          {copied ? "COPIED" : "CLICK TO COPY · ESC TO CLOSE"}
+          {copied ? "COPIED" : CA ? "CLICK TO COPY · ESC TO CLOSE" : "ESC TO CLOSE"}
         </div>
       </div>
     </div>
