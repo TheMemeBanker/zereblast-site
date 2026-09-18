@@ -9,7 +9,11 @@ import { motion } from "framer-motion";
  * wallet actually holds. Solscan link lets anyone verify independently.
  */
 const RESERVE_WALLET = "BZfRPexCoXMsFLvbYqn8C4PvTLH5KRaxpsFHynMTGQoN";
-const ZEREBRO_MINT = "8x5VqbHA8D7NkD52uNuS5nnt3PwA8pLD34ymskeSo2Wn";
+// The wallet's ZEREBRO token account (deterministic for wallet+mint, so it
+// stays valid across balance changes). Public RPCs now 403 the indexed
+// getTokenAccountsByOwner from browsers, but plain getAccountInfo on the
+// token account passes — hence the pre-derived address.
+const RESERVE_TOKEN_ACCOUNT = "5ZurRsJkvFUvK2rxt9pcWBwgUYM7Bk8RCcnqis8sSU6S";
 const RPCS = [
   "https://solana-rpc.publicnode.com",
   "https://api.mainnet-beta.solana.com",
@@ -35,14 +39,14 @@ export default function RewardsReserve() {
             body: JSON.stringify({
               jsonrpc: "2.0",
               id: 1,
-              method: "getTokenAccountsByOwner",
-              params: [RESERVE_WALLET, { mint: ZEREBRO_MINT }, { encoding: "jsonParsed" }],
+              method: "getAccountInfo",
+              params: [RESERVE_TOKEN_ACCOUNT, { encoding: "jsonParsed" }],
             }),
             signal: AbortSignal.timeout(8000),
           });
           if (!res.ok) continue;
           const data = await res.json();
-          const amt = data?.result?.value?.[0]?.account?.data?.parsed?.info?.tokenAmount?.uiAmount;
+          const amt = data?.result?.value?.data?.parsed?.info?.tokenAmount?.uiAmount;
           if (typeof amt === "number" && !cancelled) {
             setBalance(amt);
             return;
