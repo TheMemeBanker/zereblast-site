@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import GlitchOverlay from "@/components/GlitchOverlay";
+import RewardsReserve from "@/components/RewardsReserve";
 import ScrambleText from "@/components/ScrambleText";
 import HudFrame from "@/components/HudFrame";
 
@@ -283,6 +284,9 @@ export default function Home() {
           <ScrambleText text="HI-SCORE" finishTime={4000} tickInterval={100} />
         </motion.div>
       </div>
+
+      {/* $ZEREBRO rewards reserve — live on-chain balance, links to Solscan */}
+      <RewardsReserve />
 
       {/* Bottom bar — token left, links right */}
       <div className="absolute bottom-0 left-0 right-0 z-30 flex items-center justify-between px-3 sm:px-4 pb-3 sm:pb-4">
