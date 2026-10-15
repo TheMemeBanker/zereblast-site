@@ -18,7 +18,7 @@ import { useEffect, useState, useCallback } from "react";
  */
 // Keep in lockstep with the footer wordmark link (app/page.tsx) — these two
 // surfaces must never drift. Verify any new mint via the pump.fun API first.
-const CA = "4hMvdY7KbsCzHnRE7Js6kNFyTdkqKMeTv9GPYD5ppump";
+const CA = "";
 
 /** ↑ ↑ ↓ ↓ ← → ← → B A */
 const KONAMI = [
