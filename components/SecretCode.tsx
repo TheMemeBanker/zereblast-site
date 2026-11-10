@@ -18,7 +18,7 @@ import { useEffect, useState, useCallback } from "react";
  */
 // Keep in lockstep with the footer wordmark link (app/page.tsx) — these two
 // surfaces must never drift. Verify any new mint via the pump.fun API first.
-const CA = "B7jPCLmFAqUrzdwajxrjEMFQjg3jZcPFh7pfAALFpump";
+const CA = ""; // unlinked 2026-11-10 pending the new mint from the operator
 
 /** ↑ ↑ ↓ ↓ ← → ← → B A */
 const KONAMI = [
