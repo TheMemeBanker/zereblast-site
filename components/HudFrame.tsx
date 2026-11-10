@@ -128,7 +128,7 @@ function SystemStatus() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 0.15 }}
       transition={{ delay: 5.5, duration: 2 }}
-      className="hidden sm:flex absolute top-10 right-3 flex-col gap-0.5 items-end pointer-events-none"
+      className="hidden sm:flex absolute top-[84px] right-3 flex-col gap-0.5 items-end pointer-events-none"
       style={{ fontFamily: "var(--font-press-start)" }}
     >
       <span className="text-[4px] text-[#00f0ff]/80">{fps} FPS</span>
