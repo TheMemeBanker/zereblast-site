@@ -1,12 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import GlitchOverlay from "@/components/GlitchOverlay";
 import RewardsReserve from "@/components/RewardsReserve";
 import ScrambleText from "@/components/ScrambleText";
 import HudFrame from "@/components/HudFrame";
+import BlastGame, { KEY_BEST, SCORE_EVENT } from "@/components/BlastGame";
+import Sigil from "@/components/Sigil";
 
 const ArcadeScene = dynamic(() => import("@/components/ArcadeScene"), {
   ssr: false,
@@ -74,12 +76,38 @@ function AnimatedBar({ color, delay }: { color: string; delay: number }) {
   );
 }
 
+/** P1 shows the real local high score once a game has been played; until then the decorative ticker. */
+function P1Score() {
+  const [best, setBest] = useState<number | null>(null);
+  useEffect(() => {
+    const read = () => {
+      try {
+        const v = Number(localStorage.getItem(KEY_BEST) || 0);
+        setBest(v > 0 ? v : null);
+      } catch {
+        setBest(null);
+      }
+    };
+    read();
+    window.addEventListener(SCORE_EVENT, read);
+    return () => window.removeEventListener(SCORE_EVENT, read);
+  }, []);
+  if (best === null) return <TickingScore target={88450} delay={3} />;
+  return <span id="p1score">{String(Math.min(best, 999999)).padStart(6, "0")}</span>;
+}
+
 export default function Home() {
+  const [gameOpen, setGameOpen] = useState(false);
+  // The 3D scene must never re-render: @react-three/postprocessing memoises
+  // effect args with JSON.stringify(props), and on a re-render those props
+  // carry circular Object3D refs, which throws and takes the whole page down.
+  // Home now holds state (the game), so pin the element identity once.
+  const scene = useMemo(() => <ArcadeScene />, []);
   return (
     <main className="relative h-[100dvh] min-h-[500px] overflow-hidden bg-[#0a0610]">
       {/* === 3D ARCADE SCENE === */}
       <div className="absolute inset-0 z-0">
-        <ArcadeScene />
+        {scene}
       </div>
 
       {/* === HUD OVERLAY === */}
@@ -190,7 +218,7 @@ export default function Home() {
                   className="text-[6px] sm:text-[9px] text-[#ff2d7b] glow-text"
                   style={{ fontFamily: "var(--font-press-start)" }}
                 >
-                  <TickingScore target={88450} delay={3} />
+                  <P1Score />
                 </span>
               </div>
               <div className="flex items-center gap-1">
@@ -205,12 +233,16 @@ export default function Home() {
 
             {/* Center — status */}
             <div className="flex flex-col items-center gap-1">
-              <span
-                className="text-[5px] sm:text-[7px] text-[#ffe644] neon-flicker tracking-[0.3em]"
-                style={{ fontFamily: "var(--font-press-start)" }}
+              <button
+                id="startBtn"
+                type="button"
+                onClick={() => setGameOpen(true)}
+                className="pointer-events-auto cursor-pointer border border-[#ffe644]/40 bg-black/40 px-2.5 py-1.5 sm:px-3 sm:py-2 text-[5px] sm:text-[7px] text-[#ffe644] neon-flicker tracking-[0.3em] uppercase transition hover:border-[#ffe644] hover:bg-[#ffe644]/10 active:scale-[0.97]"
+                style={{ fontFamily: "var(--font-press-start)", boxShadow: "0 0 12px rgba(255,230,68,0.25)" }}
+                aria-label="Press start to play ZEREBLAST"
               >
-                <ScrambleText text="READY" finishTime={3000} tickInterval={80} />
-              </span>
+                <ScrambleText text="PRESS START" finishTime={3000} tickInterval={80} />
+              </button>
               <div className="flex items-center gap-1">
                 {[...Array(3)].map((_, i) => (
                   <motion.div
@@ -273,17 +305,8 @@ export default function Home() {
         </motion.div>
       </div>
 
-      <div className="hidden sm:block absolute top-3 right-3 z-10 pointer-events-none">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.4 }}
-          transition={{ delay: 3.5, duration: 1 }}
-          className="text-[5px] text-[#39ff14]/60 tracking-[0.2em]"
-          style={{ fontFamily: "var(--font-press-start)" }}
-        >
-          <ScrambleText text="HI-SCORE" finishTime={4000} tickInterval={100} />
-        </motion.div>
-      </div>
+      {/* THE ENTITY: boot sequence, then the system badge (sigil, real HI-SCORE, live slot, bitmap readout) */}
+      <Sigil onStart={() => setGameOpen(true)} />
 
       {/* $ZEREBRO rewards reserve — live on-chain balance, links to Solscan */}
       <RewardsReserve />
@@ -349,6 +372,9 @@ export default function Home() {
           </motion.a>
         </div>
       </div>
+
+      {/* The game */}
+      <BlastGame open={gameOpen} onClose={() => setGameOpen(false)} />
 
       {/* HUD frame */}
       <HudFrame />
