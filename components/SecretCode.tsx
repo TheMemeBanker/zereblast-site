@@ -18,7 +18,7 @@ import { useEffect, useState, useCallback } from "react";
  */
 // Keep in lockstep with the footer wordmark link (app/page.tsx) — these two
 // surfaces must never drift. Verify any new mint via the pump.fun API first.
-const CA = ""; // unlinked 2026-11-10 pending the new mint from the operator
+const CA = "Fd7a3wLUThrcycx1o7Fd4i2LpsvJiwaN6K7LAwsqpump"; // verified on-chain 2026-11-10: Token-2022 zereblast/ZEREBLAST, 6 dec, authorities revoked, pump.fun pair live
 
 /** ↑ ↑ ↓ ↓ ← → ← → B A */
 const KONAMI = [
