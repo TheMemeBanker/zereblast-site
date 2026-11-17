@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Press_Start_2P } from "next/font/google";
 import "./globals.css";
 import SecretCode from "@/components/SecretCode";
+import CaTicker from "@/components/CaTicker";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -35,6 +36,7 @@ export default function RootLayout({
       <body>
         {children}
         <SecretCode />
+        <CaTicker />
       </body>
     </html>
   );

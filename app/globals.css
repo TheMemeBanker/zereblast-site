@@ -380,3 +380,19 @@ a:focus-visible, button:focus-visible {
   }
   .glitch-overlay { display: none; }
 }
+
+/* ---- CA ticker: the contract address flashing across the top edge ---- */
+.ca-ticker { position: fixed; top: 0; left: 0; right: 0; z-index: 45; height: 26px; display: flex; align-items: center; overflow: hidden; cursor: pointer; background: linear-gradient(180deg, rgba(8,4,16,.96), rgba(13,8,24,.9)); border-bottom: 1px solid #8ccc68; box-shadow: 0 0 18px rgba(140,204,104,.35), inset 0 -1px 0 rgba(140,204,104,.25); }
+.ca-ticker-track { display: flex; white-space: nowrap; will-change: transform; animation: ca-scroll 28s linear infinite; }
+.ca-ticker-track.static { animation: none; padding-left: 12px; }
+.ca-ticker-track span { font-size: 9px; letter-spacing: .22em; color: #8ccc68; text-shadow: 0 0 6px rgba(140,204,104,.8); padding-right: 2em; }
+.ca-ticker:hover .ca-ticker-track { animation-play-state: paused; }
+.ca-ticker-flash { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, transparent 0%, rgba(140,204,104,.35) 50%, transparent 100%); transform: translateX(-100%); animation: ca-flash 4.5s ease-in-out infinite; }
+.ca-ticker.pending { border-bottom-color: #b44dff; box-shadow: 0 0 18px rgba(180,77,255,.3); }
+.ca-ticker.pending .ca-ticker-track span { color: #b44dff; text-shadow: 0 0 6px rgba(180,77,255,.8); }
+.ca-ticker-link { position: absolute; right: 0; top: 0; bottom: 0; display: flex; align-items: center; padding: 0 12px; font-size: 7px; letter-spacing: .2em; color: #0d0818; background: #8ccc68; text-decoration: none; }
+.ca-ticker-link:hover { background: #b6ff8a; }
+@keyframes ca-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes ca-flash { 0%, 55% { transform: translateX(-100%); } 85%, 100% { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .ca-ticker-flash { animation: none; } }
+@media (max-width: 640px) { .ca-ticker-link { font-size: 6px; padding: 0 8px; } }

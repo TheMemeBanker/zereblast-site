@@ -1,5 +1,7 @@
 "use client";
 
+import { CA } from "./ca";
+
 import { useEffect, useState, useCallback } from "react";
 
 /**
@@ -18,7 +20,6 @@ import { useEffect, useState, useCallback } from "react";
  */
 // Keep in lockstep with the footer wordmark link (app/page.tsx) — these two
 // surfaces must never drift. Verify any new mint via the pump.fun API first.
-const CA = "nkN3eTGKXEWESKtC3i4ebah1ArDvHUrBKiCCWcwpump"; // verified on-chain 2026-11-17: Token-2022 ZEREBLAST/ZEREBLAST, 6 dec, 1B supply, mint+freeze+update authority revoked; pump.fun pair live on DexScreener
 
 /** ↑ ↑ ↓ ↓ ← → ← → B A */
 const KONAMI = [

@@ -7,6 +7,7 @@ import GlitchOverlay from "@/components/GlitchOverlay";
 import RewardsReserve from "@/components/RewardsReserve";
 import ScrambleText from "@/components/ScrambleText";
 import HudFrame from "@/components/HudFrame";
+import { PUMP_URL } from "@/components/ca";
 import BlastGame, { KEY_BEST, SCORE_EVENT } from "@/components/BlastGame";
 import Sigil from "@/components/Sigil";
 
@@ -315,9 +316,7 @@ export default function Home() {
       <div className="absolute bottom-0 left-0 right-0 z-30 flex items-center justify-between px-3 sm:px-4 pb-3 sm:pb-4">
         {/* $ZEREBLAST */}
         <motion.a
-          href="https://pump.fun/coin/nkN3eTGKXEWESKtC3i4ebah1ArDvHUrBKiCCWcwpump"
-          target="_blank"
-          rel="noopener noreferrer"
+          {...(PUMP_URL ? { href: PUMP_URL, target: "_blank", rel: "noopener noreferrer" } : { "data-token-link": "PENDING" })}
           initial={{ opacity: 0 }}
           animate={{ opacity: 0.35 }}
           whileHover={{ opacity: 1, scale: 1.05 }}
