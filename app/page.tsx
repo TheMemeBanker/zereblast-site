@@ -8,11 +8,12 @@ import HowToPlay from "@/components/HowToPlay";
 import RewardsReserve from "@/components/RewardsReserve";
 import BlastGame from "@/components/BlastGame";
 import { PUMP_URL } from "@/components/ca";
+import TokenPanel from "@/components/TokenPanel";
 
 const WRAP: React.CSSProperties = { width: "min(1120px, 100% - 32px)", margin: "0 auto" };
 
 function Ticker() {
-  const items = ["BLAST THE GLITCH", "THREE LIVES", "DAILY MISSIONS", "CLIMB THE RANKS", "THE ENTITY BREACHES EVERY 4TH WAVE", "RECORDS LIVE IN YOUR BROWSER"];
+  const items = ["$ZEREBLAST", "BLAST THE GLITCH", "THREE LIVES", "DAILY MISSIONS", "CLIMB THE RANKS", "THE ENTITY BREACHES EVERY 4TH WAVE", "RECORDS LIVE IN YOUR BROWSER"];
   const unit = items.map((t, i) => (
     <span key={i} className="hud" style={{ fontSize: 8, letterSpacing: ".22em", padding: "0 22px", display: "inline-flex", alignItems: "center", gap: 14 }}>
       {t} <Bolt size={9} color="var(--yellow)" />
@@ -43,6 +44,7 @@ export default function Home() {
           <Wordmark className="hide-sm" />
         </a>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <a href="#token" className="tag tag-yellow hide-sm" style={{ textDecoration: "none", color: "var(--ink)", padding: "9px 10px" }}>$ZEREBLAST</a>
           <PlayerChip />
           <button type="button" className="btn btn-primary btn-sm hide-sm" onClick={start}>
             PRESS START
@@ -83,8 +85,20 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ----------------------------------------------------- player card */}
+      {/* ------------------------------------------------------------ token */}
       <section className="section" style={{ background: "var(--cream-2)" }}>
+        <div style={WRAP}>
+          <div className="section-title">
+            <span className="num">00</span>
+            <h2>$ZEREBLAST</h2>
+            <span className="eyebrow">THE COIN BEHIND THE CARTRIDGE</span>
+          </div>
+          <TokenPanel />
+        </div>
+      </section>
+
+      {/* ----------------------------------------------------- player card */}
+      <section className="section">
         <div style={WRAP}>
           <div className="section-title">
             <span className="num">01</span>
@@ -95,7 +109,7 @@ export default function Home() {
       </section>
 
       {/* --------------------------------------------------------- missions */}
-      <section className="section" id="missions">
+      <section className="section" id="missions" style={{ background: "var(--cream-2)" }}>
         <div style={WRAP}>
           <div className="section-title">
             <span className="num">02</span>
@@ -107,7 +121,7 @@ export default function Home() {
       </section>
 
       {/* ----------------------------------------------------------- badges */}
-      <section className="section" style={{ background: "var(--cream-2)" }}>
+      <section className="section">
         <div style={WRAP}>
           <div className="section-title">
             <span className="num">03</span>
@@ -119,7 +133,7 @@ export default function Home() {
       </section>
 
       {/* ------------------------------------------------------ how to play */}
-      <section className="section" id="how">
+      <section className="section" id="how" style={{ background: "var(--cream-2)" }}>
         <div style={WRAP}>
           <div className="section-title">
             <span className="num">04</span>
@@ -130,7 +144,7 @@ export default function Home() {
       </section>
 
       {/* ---------------------------------------------------------- rewards */}
-      <section className="section" style={{ background: "var(--cream-2)" }}>
+      <section className="section" id="rewards">
         <div style={WRAP}>
           <div className="section-title">
             <span className="num">05</span>
@@ -162,7 +176,7 @@ export default function Home() {
               $ZEREBLAST
             </a>
           ) : (
-            <span className="hud" style={{ fontSize: 9, letterSpacing: ".2em" }}>$ZEREBLAST</span>
+            <a href="#token" className="hud" style={{ fontSize: 9, letterSpacing: ".2em", color: "var(--ink)" }}>$ZEREBLAST</a>
           )}
         </div>
         <div className="hud" style={{ display: "flex", flexWrap: "wrap", gap: 18, fontSize: 8, letterSpacing: ".18em" }}>
