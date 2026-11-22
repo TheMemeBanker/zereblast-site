@@ -1,388 +1,180 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { useState, useEffect, useMemo } from "react";
-import dynamic from "next/dynamic";
-import GlitchOverlay from "@/components/GlitchOverlay";
+import { useState } from "react";
+import { Bolt, Mark, Wordmark } from "@/components/Brand";
+import Cartridge from "@/components/Cartridge";
+import { Badges, Missions, PlayerCard, PlayerChip } from "@/components/Progression";
+import HowToPlay from "@/components/HowToPlay";
 import RewardsReserve from "@/components/RewardsReserve";
-import ScrambleText from "@/components/ScrambleText";
-import HudFrame from "@/components/HudFrame";
+import BlastGame from "@/components/BlastGame";
 import { PUMP_URL } from "@/components/ca";
-import BlastGame, { KEY_BEST, SCORE_EVENT } from "@/components/BlastGame";
-import Sigil from "@/components/Sigil";
 
-const ArcadeScene = dynamic(() => import("@/components/ArcadeScene"), {
-  ssr: false,
-  loading: () => (
-    <div className="w-full h-full bg-[#0a0610] flex items-center justify-center">
-      <div
-        className="text-[8px] text-[#ffe644] tracking-[0.4em] uppercase animate-pulse"
-        style={{ fontFamily: "var(--font-press-start)" }}
-      >
-        Loading...
-      </div>
-    </div>
-  ),
-});
+const WRAP: React.CSSProperties = { width: "min(1120px, 100% - 32px)", margin: "0 auto" };
 
-function TickingScore({ target, delay }: { target: number; delay: number }) {
-  const [score, setScore] = useState(0);
-  const [started, setStarted] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setStarted(true), delay * 1000);
-    return () => clearTimeout(timer);
-  }, [delay]);
-
-  useEffect(() => {
-    if (!started) return;
-    const interval = setInterval(() => {
-      setScore((s) => {
-        if (s >= target) {
-          clearInterval(interval);
-          return target;
-        }
-        return s + Math.ceil(Math.random() * 137);
-      });
-    }, 80);
-    return () => clearInterval(interval);
-  }, [started, target]);
-
-  return <>{String(Math.min(score, target)).padStart(6, "0")}</>;
-}
-
-function AnimatedBar({ color, delay }: { color: string; delay: number }) {
-  const [width, setWidth] = useState(0);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const interval = setInterval(() => {
-        setWidth((w) => {
-          if (w >= 100) { clearInterval(interval); return 100; }
-          return w + 2;
-        });
-      }, 30);
-      return () => clearInterval(interval);
-    }, delay * 1000);
-    return () => clearTimeout(timer);
-  }, [delay]);
-
+function Ticker() {
+  const items = ["BLAST THE GLITCH", "THREE LIVES", "DAILY MISSIONS", "CLIMB THE RANKS", "THE ENTITY BREACHES EVERY 4TH WAVE", "RECORDS LIVE IN YOUR BROWSER"];
+  const unit = items.map((t, i) => (
+    <span key={i} className="hud" style={{ fontSize: 8, letterSpacing: ".22em", padding: "0 22px", display: "inline-flex", alignItems: "center", gap: 14 }}>
+      {t} <Bolt size={9} color="var(--yellow)" />
+    </span>
+  ));
   return (
-    <div className="w-16 sm:w-20 md:w-28 h-[4px] bg-[#1a0f2e] border border-[#2a1848]/50 overflow-hidden">
-      <div
-        className="h-full transition-all duration-75"
-        style={{ width: `${width}%`, background: color }}
-      />
+    <div style={{ background: "var(--ink)", color: "var(--cream)", borderBottom: "2px solid var(--ink)", overflow: "hidden", padding: "9px 0" }} aria-hidden="true">
+      <div className="marquee">
+        {unit}
+        {unit}
+      </div>
     </div>
   );
 }
 
-/** P1 shows the real local high score once a game has been played; until then the decorative ticker. */
-function P1Score() {
-  const [best, setBest] = useState<number | null>(null);
-  useEffect(() => {
-    const read = () => {
-      try {
-        const v = Number(localStorage.getItem(KEY_BEST) || 0);
-        setBest(v > 0 ? v : null);
-      } catch {
-        setBest(null);
-      }
-    };
-    read();
-    window.addEventListener(SCORE_EVENT, read);
-    return () => window.removeEventListener(SCORE_EVENT, read);
-  }, []);
-  if (best === null) return <TickingScore target={88450} delay={3} />;
-  return <span id="p1score">{String(Math.min(best, 999999)).padStart(6, "0")}</span>;
-}
-
 export default function Home() {
   const [gameOpen, setGameOpen] = useState(false);
-  // The 3D scene must never re-render: @react-three/postprocessing memoises
-  // effect args with JSON.stringify(props), and on a re-render those props
-  // carry circular Object3D refs, which throws and takes the whole page down.
-  // Home now holds state (the game), so pin the element identity once.
-  const scene = useMemo(() => <ArcadeScene />, []);
+  const start = () => setGameOpen(true);
+
   return (
-    <main className="relative h-[100dvh] min-h-[500px] overflow-hidden bg-[#0a0610]">
-      {/* === 3D ARCADE SCENE === */}
-      <div className="absolute inset-0 z-0">
-        {scene}
-      </div>
+    <main>
+      <Ticker />
 
-      {/* === HUD OVERLAY === */}
-      <div className="relative z-10 h-full flex flex-col pointer-events-none">
-        {/* TOP — Title */}
-        <div className="flex flex-col items-center pt-[3vh] sm:pt-[3vh]">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5, y: -40 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 1.4, ease: [0.23, 1, 0.32, 1] }}
-          >
-            <motion.div
-              animate={{
-                scale: [1, 1.06, 0.97, 1.03, 1],
-                rotate: [0, 0.5, -0.4, 0.3, 0],
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-            >
-              {/* Glitch jitter layer */}
-              <motion.div
-                animate={{
-                  x: [0, -2, 3, -1, 0, 2, -3, 0],
-                  y: [0, 1, -1, 0, 1, -1, 0, 0],
-                  skewX: [0, -0.5, 0.8, 0, -0.3, 0.5, 0, 0],
-                }}
-                transition={{
-                  duration: 0.4,
-                  repeat: Infinity,
-                  repeatDelay: 2.5,
-                  ease: "easeInOut",
-                }}
-              >
-                {/* Power flash layer */}
-                <motion.div
-                  animate={{
-                    filter: [
-                      "brightness(1) saturate(1)",
-                      "brightness(1.8) saturate(1.5)",
-                      "brightness(0.9) saturate(1.2)",
-                      "brightness(1.4) saturate(1.3)",
-                      "brightness(1) saturate(1)",
-                    ],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    repeatDelay: 3,
-                    ease: "easeInOut",
-                  }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/title.png"
-                    alt="ZEREBLAST"
-                    className="title-glow-intense w-[140px] sm:w-[240px] md:w-[320px] lg:w-[380px] select-none"
-                    draggable={false}
-                  />
-                </motion.div>
-              </motion.div>
-
-              {/* Neon underline */}
-              <motion.div
-                className="mx-auto mt-1 h-[2px] rounded-full"
-                style={{
-                  background: "linear-gradient(90deg, transparent, #ff2d7b, #00f0ff, #39ff14, #ff2d7b, transparent)",
-                  boxShadow: "0 0 8px #ff2d7b, 0 0 20px #00f0ff, 0 0 40px #b44dff",
-                }}
-                animate={{
-                  width: ["40%", "90%", "60%", "85%", "40%"],
-                  opacity: [0.5, 1, 0.7, 0.9, 0.5],
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-              />
-            </motion.div>
-          </motion.div>
+      {/* ---------------------------------------------------------- header */}
+      <header style={{ ...WRAP, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "18px 0" }}>
+        <a href="#top" style={{ display: "inline-flex", alignItems: "center", gap: 12, textDecoration: "none" }} aria-label="ZEREBLAST home">
+          <Mark size={40} />
+          <Wordmark className="hide-sm" />
+        </a>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <PlayerChip />
+          <button type="button" className="btn btn-primary btn-sm hide-sm" onClick={start}>
+            PRESS START
+          </button>
         </div>
+      </header>
 
-        {/* SPACER */}
-        <div className="flex-1" />
-
-        {/* BOTTOM — Arcade HUD */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 2.5, duration: 1 }}
-          className="pb-[60px] sm:pb-[70px] px-3 sm:px-4"
-        >
-          {/* Player stats bar */}
-          <div className="max-w-[700px] mx-auto flex items-end justify-between gap-2 sm:gap-4">
-            {/* P1 */}
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <span
-                  className="text-[5px] sm:text-[7px] text-[#ff2d7b] tracking-[0.15em]"
-                  style={{ fontFamily: "var(--font-press-start)" }}
-                >
-                  P1
-                </span>
-                <span
-                  className="text-[6px] sm:text-[9px] text-[#ff2d7b] glow-text"
-                  style={{ fontFamily: "var(--font-press-start)" }}
-                >
-                  <P1Score />
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-[4px] sm:text-[5px] text-[#ff2d7b]/60" style={{ fontFamily: "var(--font-press-start)" }}>HP</span>
-                <AnimatedBar color="linear-gradient(90deg, #ff2d7b, #ff6b9d)" delay={3.5} />
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="text-[4px] sm:text-[5px] text-[#00f0ff]/60" style={{ fontFamily: "var(--font-press-start)" }}>MP</span>
-                <AnimatedBar color="linear-gradient(90deg, #00c8ff, #00f0ff)" delay={3.8} />
-              </div>
-            </div>
-
-            {/* Center — status */}
-            <div className="flex flex-col items-center gap-1">
-              <button
-                id="startBtn"
-                type="button"
-                onClick={() => setGameOpen(true)}
-                className="pointer-events-auto cursor-pointer border border-[#ffe644]/40 bg-black/40 px-2.5 py-1.5 sm:px-3 sm:py-2 text-[5px] sm:text-[7px] text-[#ffe644] neon-flicker tracking-[0.3em] uppercase transition hover:border-[#ffe644] hover:bg-[#ffe644]/10 active:scale-[0.97]"
-                style={{ fontFamily: "var(--font-press-start)", boxShadow: "0 0 12px rgba(255,230,68,0.25)" }}
-                aria-label="Press start to play ZEREBLAST"
-              >
-                <ScrambleText text="PRESS START" finishTime={3000} tickInterval={80} />
-              </button>
-              <div className="flex items-center gap-1">
-                {[...Array(3)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 3 + i * 0.2 }}
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{
-                      background: "#ffe644",
-                      boxShadow: "0 0 4px #ffe644, 0 0 8px #ffe644",
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* P2 */}
-            <div className="flex flex-col gap-1 items-end">
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <span
-                  className="text-[6px] sm:text-[9px] text-[#00f0ff] glow-text"
-                  style={{ fontFamily: "var(--font-press-start)" }}
-                >
-                  <TickingScore target={72300} delay={3.2} />
-                </span>
-                <span
-                  className="text-[5px] sm:text-[7px] text-[#00f0ff] tracking-[0.15em]"
-                  style={{ fontFamily: "var(--font-press-start)" }}
-                >
-                  P2
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                <AnimatedBar color="linear-gradient(90deg, #39ff14, #7fff00)" delay={4} />
-                <span className="text-[4px] sm:text-[5px] text-[#39ff14]/60" style={{ fontFamily: "var(--font-press-start)" }}>HP</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <AnimatedBar color="linear-gradient(90deg, #b44dff, #d580ff)" delay={4.2} />
-                <span className="text-[4px] sm:text-[5px] text-[#b44dff]/60" style={{ fontFamily: "var(--font-press-start)" }}>MP</span>
-              </div>
-            </div>
+      {/* ------------------------------------------------------------ hero */}
+      <section id="top" style={{ ...WRAP, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "clamp(28px, 5vw, 64px)", alignItems: "center", padding: "clamp(24px, 5vw, 64px) 0 clamp(40px, 6vw, 80px)" }}>
+        <div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <span className="tag tag-fill">CARTRIDGE 01</span>
+            <span className="tag">FIXED SHOOTER</span>
+            <span className="tag tag-yellow">FREE PLAY</span>
           </div>
-
-          {/* Bottom edge line */}
-          <div className="max-w-[700px] mx-auto mt-2 sm:mt-3 h-px bg-gradient-to-r from-transparent via-[#ff2d7b]/30 to-transparent" />
-        </motion.div>
-      </div>
-
-      {/* Corner decorations — hidden on mobile */}
-      <div className="hidden sm:block absolute top-3 left-3 z-10 pointer-events-none">
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.4 }}
-          transition={{ delay: 3, duration: 1 }}
-          className="text-[5px] text-[#b44dff]/60 tracking-[0.2em]"
-          style={{ fontFamily: "var(--font-press-start)" }}
-        >
-          <ScrambleText text="LVL 99" finishTime={4000} tickInterval={100} />
-        </motion.div>
-      </div>
-
-      {/* THE ENTITY: boot sequence, then the system badge (sigil, real HI-SCORE, live slot, bitmap readout) */}
-      <Sigil onStart={() => setGameOpen(true)} />
-
-      {/* $ZEREBRO rewards reserve — live on-chain balance, links to Solscan */}
-      <RewardsReserve />
-
-      {/* Bottom bar — token left, links right */}
-      <div className="absolute bottom-0 left-0 right-0 z-30 flex items-center justify-between px-3 sm:px-4 pb-3 sm:pb-4">
-        {/* $ZEREBLAST */}
-        <motion.a
-          {...(PUMP_URL ? { href: PUMP_URL, target: "_blank", rel: "noopener noreferrer" } : { "data-token-link": "PENDING" })}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.35 }}
-          whileHover={{ opacity: 1, scale: 1.05 }}
-          transition={{ delay: 4.5, duration: 1 }}
-          className="no-underline"
-        >
-          <span
-            className="text-[6px] sm:text-[8px] tracking-[0.2em] uppercase"
-            style={{
-              fontFamily: "var(--font-press-start)",
-              color: "#ffe644",
-              textShadow: "0 0 6px rgba(255,230,68,0.4)",
-            }}
-          >
-            $ZEREBLAST
-          </span>
-        </motion.a>
-
-        {/* Links */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <motion.a
-            href="https://x.com/0xzerebro"
-            target="_blank"
-            rel="noopener noreferrer"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.35 }}
-            whileHover={{ opacity: 1, scale: 1.05 }}
-            transition={{ delay: 4.6, duration: 1 }}
-            className="text-[4px] sm:text-[6px] tracking-[0.2em] uppercase no-underline"
-            style={{
-              fontFamily: "var(--font-press-start)",
-              color: "#b44dff",
-              textShadow: "0 0 6px rgba(180,77,255,0.4)",
-            }}
-          >
-            @0xzerebro
-          </motion.a>
-          <motion.a
-            href="https://zerebro.org/"
-            target="_blank"
-            rel="noopener noreferrer"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.35 }}
-            whileHover={{ opacity: 1, scale: 1.05 }}
-            transition={{ delay: 4, duration: 1 }}
-            className="text-[4px] sm:text-[6px] tracking-[0.2em] uppercase no-underline"
-            style={{
-              fontFamily: "var(--font-press-start)",
-              color: "#b44dff",
-              textShadow: "0 0 6px rgba(180,77,255,0.4)",
-            }}
-          >
-            zerebro.org
-          </motion.a>
+          <h1 className="display" style={{ fontSize: "clamp(44px, 8.2vw, 104px)", margin: "22px 0 0", lineHeight: 0.92 }}>
+            <span style={{ display: "block" }}>BLAST</span>
+            <span style={{ display: "block", color: "var(--orange)", textShadow: "0.05em 0.05em 0 var(--ink)" }}>THE</span>
+            <span style={{ display: "block", color: "var(--cobalt)", textShadow: "0.05em 0.05em 0 var(--ink)" }}>GLITCH.</span>
+          </h1>
+          <p style={{ fontSize: "clamp(16px, 1.6vw, 19px)", lineHeight: 1.55, maxWidth: 520, margin: "22px 0 0", color: "var(--ink-2)" }}>
+            A pocket arcade in a cartridge. Three lives, endless waves, the Entity every fourth. Every point you score is XP: clear the day&apos;s missions, unlock badges, climb from ROOKIE to LEGEND. Your record lives in this browser, nowhere else.
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 28 }}>
+            <button type="button" className="btn btn-primary" onClick={start}>
+              <Bolt size={12} color="var(--ink)" /> PRESS START
+            </button>
+            <a className="btn" href="#missions">
+              TODAY&apos;S MISSIONS
+            </a>
+          </div>
+          <div className="hud" style={{ fontSize: 8, letterSpacing: ".18em", color: "var(--muted)", marginTop: 22 }}>
+            KEYBOARD OR TOUCH · NO ACCOUNT · NO DOWNLOAD
+          </div>
         </div>
-      </div>
+        <div style={{ display: "flex", justifyContent: "center", padding: "10px 16px 16px 0" }}>
+          <Cartridge onStart={start} />
+        </div>
+      </section>
 
-      {/* The game */}
+      {/* ----------------------------------------------------- player card */}
+      <section className="section" style={{ background: "var(--cream-2)" }}>
+        <div style={WRAP}>
+          <div className="section-title">
+            <span className="num">01</span>
+            <h2>YOUR CARD</h2>
+          </div>
+          <PlayerCard />
+        </div>
+      </section>
+
+      {/* --------------------------------------------------------- missions */}
+      <section className="section" id="missions">
+        <div style={WRAP}>
+          <div className="section-title">
+            <span className="num">02</span>
+            <h2>DAILY MISSIONS</h2>
+            <span className="eyebrow">THREE A DAY · RESET AT 00:00 UTC</span>
+          </div>
+          <Missions />
+        </div>
+      </section>
+
+      {/* ----------------------------------------------------------- badges */}
+      <section className="section" style={{ background: "var(--cream-2)" }}>
+        <div style={WRAP}>
+          <div className="section-title">
+            <span className="num">03</span>
+            <h2>BADGES</h2>
+            <span className="eyebrow">EARNED, NEVER BOUGHT</span>
+          </div>
+          <Badges />
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------ how to play */}
+      <section className="section" id="how">
+        <div style={WRAP}>
+          <div className="section-title">
+            <span className="num">04</span>
+            <h2>HOW TO PLAY</h2>
+          </div>
+          <HowToPlay />
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------- rewards */}
+      <section className="section" style={{ background: "var(--cream-2)" }}>
+        <div style={WRAP}>
+          <div className="section-title">
+            <span className="num">05</span>
+            <h2>REWARDS</h2>
+          </div>
+          <RewardsReserve />
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------- CTA */}
+      <section className="section" style={{ background: "var(--ink)", color: "var(--cream)", borderBottom: "2px solid var(--ink)" }}>
+        <div style={{ ...WRAP, display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 24 }}>
+          <div>
+            <div className="eyebrow" style={{ color: "var(--cobalt-2)" }}>READY?</div>
+            <div className="display" style={{ fontSize: "clamp(30px, 5vw, 56px)", marginTop: 8 }}>INSERT CARTRIDGE.</div>
+          </div>
+          <button type="button" className="btn btn-primary" onClick={start}>
+            <Bolt size={12} color="var(--ink)" /> PRESS START
+          </button>
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------- footer */}
+      <footer style={{ ...WRAP, display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 16, padding: "26px 0 34px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Mark size={28} />
+          {PUMP_URL ? (
+            <a href={PUMP_URL} target="_blank" rel="noopener noreferrer" className="hud" style={{ fontSize: 9, letterSpacing: ".2em", color: "var(--ink)" }}>
+              $ZEREBLAST
+            </a>
+          ) : (
+            <span className="hud" style={{ fontSize: 9, letterSpacing: ".2em" }}>$ZEREBLAST</span>
+          )}
+        </div>
+        <div className="hud" style={{ display: "flex", flexWrap: "wrap", gap: 18, fontSize: 8, letterSpacing: ".18em" }}>
+          <a href="https://x.com/0xzerebro" target="_blank" rel="noopener noreferrer" style={{ color: "var(--ink)" }}>@0XZEREBRO</a>
+          <a href="https://zerebro.org/" target="_blank" rel="noopener noreferrer" style={{ color: "var(--ink)" }}>ZEREBRO.ORG</a>
+        </div>
+        <div className="hud" style={{ fontSize: 7, letterSpacing: ".16em", color: "var(--muted)", width: "100%" }}>
+          ZEREBLAST 2026 · RECORDS LIVE IN THIS BROWSER ONLY · REWARDS ARE A PLAN, NOT A GUARANTEE
+        </div>
+      </footer>
+
       <BlastGame open={gameOpen} onClose={() => setGameOpen(false)} />
-
-      {/* HUD frame */}
-      <HudFrame />
-
-      {/* Glitch system */}
-      <GlitchOverlay />
-      <div className="crt-overlay" aria-hidden="true" />
     </main>
   );
 }

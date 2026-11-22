@@ -2,113 +2,51 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SIGIL_COLOR, SIGIL_H, SIGIL_ROWS, SIGIL_W } from "./sigil-data";
+import { pad, recordRun, readProgress, type RunResult } from "@/lib/progress";
+import { RunSummary } from "./Progression";
+import { Bolt } from "./Brand";
 
 /**
- * ZEREBLAST — the arcade game.
+ * ZEREBLAST — the cartridge.
  *
- * A fixed-shooter rendered on a low-resolution 2D canvas (pixel-perfect,
- * nearest-neighbour upscaled). The player sprite auto-fires upward at glitch
- * blocks falling through the arcade; Z coins and POWER UP crates drop from
- * kills. Three HP, endless waves that speed up every 15 seconds.
+ * A fixed-shooter on a low-resolution 2D canvas (pixel-perfect, nearest
+ * neighbour upscaled). The player auto-fires upward at glitch blocks; Z coins
+ * and POWER UP crates drop from kills. Three HP, endless waves that speed up
+ * every 15 seconds, the Entity every fourth wave.
  *
- * Everything is client-side. The high score, play count and the list of UTC
- * days played live in localStorage only — that is the honest basis for the
- * "daily players" line in the rewards panel until an on-chain claim exists.
+ * Records go through lib/progress (localStorage only): best, days, runs, XP,
+ * missions, badges. Nothing is faked.
  *
- * Controls: arrows / A D (move), P (pause), Esc (close). Touch: drag.
- * Keys are matched on e.code against the game's own alphabet; everything else
- * is ignored, because this page fires its own synthetic keydown events.
+ * Controls: arrows / A D (move), P (pause), Esc (eject). Touch: drag.
+ * Keys are matched on e.code against the game's own alphabet.
  */
 
-export const KEY_BEST = "zb.best";
-const KEY_DAYS = "zb.days";
-const KEY_PLAYS = "zb.plays";
-export const SCORE_EVENT = "zereblast:score";
-
-const PINK = "#ff2d7b";
-const CYAN = "#00f0ff";
-const GREEN = "#39ff14";
-const YELLOW = "#ffe644";
-const PURPLE = "#b44dff";
-const BG = "#0a0610";
+const ORANGE = "#ff4e1a";
+const BLUE = "#5b7bff";
+const YELLOW = "#ffc627";
+const CREAM = "#f3ede0";
+const MUTED = "#8b86a0";
+const BG = "#141222";
+const FLOOR = "#1f1c33";
 
 type Enemy = { x: number; y: number; s: number; vy: number; hp: number; max: number; color: string; seed: number; sway: number };
 type Shot = { x: number; y: number; vx: number; vy: number };
 type Drop = { x: number; y: number; vy: number; kind: "coin" | "power"; t: number };
 type Particle = { x: number; y: number; vx: number; vy: number; life: number; max: number; color: string };
-
 type Boss = { x: number; y: number; w: number; h: number; cell: number; hp: number; max: number; t: number; hit: number; dir: number; dropT: number };
-
 type Phase = "title" | "play" | "over";
 
 type Game = {
-  W: number;
-  H: number;
-  t: number;
-  px: number;
-  py: number;
-  pw: number;
-  ph: number;
-  target: number | null;
-  left: boolean;
-  right: boolean;
-  hp: number;
-  score: number;
-  coins: number;
-  wave: number;
-  waveT: number;
-  banner: number;
-  spawnT: number;
-  fireT: number;
-  power: number;
-  powerDrop: number;
-  shake: number;
-  hurt: number;
-  enemies: Enemy[];
-  shots: Shot[];
-  drops: Drop[];
-  parts: Particle[];
+  W: number; H: number; t: number;
+  px: number; py: number; pw: number; ph: number;
+  target: number | null; left: boolean; right: boolean;
+  hp: number; score: number; coins: number; wave: number; waveT: number; banner: number;
+  spawnT: number; fireT: number; power: number; powerDrop: number; shake: number; hurt: number;
+  enemies: Enemy[]; shots: Shot[]; drops: Drop[]; parts: Particle[];
   stars: { x: number; y: number; z: number; c: string }[];
-  boss: Boss | null;
-  bossKills: number;
-  bannerText: string;
-  over: boolean;
-  paused: boolean;
+  boss: Boss | null; bossKills: number; bannerText: string;
+  over: boolean; paused: boolean;
 };
-
-function utcDay(d = new Date()): string {
-  return d.toISOString().slice(0, 10);
-}
-function readJSON<T>(k: string, fb: T): T {
-  try {
-    const v = localStorage.getItem(k);
-    return v ? (JSON.parse(v) as T) : fb;
-  } catch {
-    return fb;
-  }
-}
-function writeJSON(k: string, v: unknown) {
-  try {
-    localStorage.setItem(k, JSON.stringify(v));
-  } catch {
-    /* private mode — the game still plays, nothing persists */
-  }
-}
-/** Consecutive UTC days played, ending today. */
-function streakOf(days: string[]): number {
-  const set = new Set(days);
-  let n = 0;
-  const d = new Date();
-  for (;;) {
-    if (!set.has(utcDay(d))) break;
-    n++;
-    d.setUTCDate(d.getUTCDate() - 1);
-  }
-  return n;
-}
-function pad(n: number) {
-  return String(Math.max(0, Math.floor(n))).padStart(6, "0");
-}
 
 /** Tiny WebAudio synth — square-wave blips, no assets. */
 class Synth {
@@ -157,7 +95,7 @@ function makeGame(W: number, H: number): Game {
     x: (i * 97 + 13) % W,
     y: (i * 53 + 7) % H,
     z: 0.3 + ((i * 7) % 10) / 12,
-    c: [PINK, CYAN, GREEN, YELLOW, PURPLE, "#ffffff"][i % 6],
+    c: [ORANGE, BLUE, YELLOW, CREAM, CREAM, MUTED][i % 6],
   }));
   return {
     W, H, t: 0,
@@ -184,7 +122,8 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
   const [best, setBest] = useState(0);
   const [streak, setStreak] = useState(0);
   const [plays, setPlays] = useState(0);
-  const [last, setLast] = useState({ score: 0, coins: 0, wave: 1, isBest: false, bosses: 0 });
+  const [last, setLast] = useState({ score: 0, coins: 0, wave: 1, bosses: 0 });
+  const [result, setResult] = useState<RunResult | null>(null);
   const [muted, setMuted] = useState(false);
   const [paused, setPaused] = useState(false);
 
@@ -195,8 +134,8 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
     const portrait = vh > vw;
     const W = portrait ? 240 : 320;
     const H = portrait ? 320 : 240;
-    const maxW = Math.min(vw - 24, portrait ? 480 : 720);
-    const maxH = vh - 150;
+    const maxW = Math.min(vw - 32, portrait ? 480 : 720);
+    const maxH = vh - 170;
     let cssW = maxW;
     let cssH = (cssW * H) / W;
     if (cssH > maxH) {
@@ -208,11 +147,15 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
 
   useEffect(() => {
     if (!open) return;
-    measure();
+    // first measure + record read on the next frame (external state → React state)
+    const raf = requestAnimationFrame(() => {
+      measure();
+      const p = readProgress();
+      setBest(p.best);
+      setStreak(p.streak);
+      setPlays(p.plays);
+    });
     window.addEventListener("resize", measure);
-    setBest(readJSON<number>(KEY_BEST, 0));
-    setStreak(streakOf(readJSON<string[]>(KEY_DAYS, [])));
-    setPlays(readJSON<number>(KEY_PLAYS, 0));
     try {
       fontRef.current = getComputedStyle(document.documentElement).getPropertyValue("--font-press-start").trim() || "monospace";
     } catch {
@@ -225,31 +168,24 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
       };
       img.src = src;
     }
-    return () => window.removeEventListener("resize", measure);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", measure);
+      document.body.style.overflow = prev;
+    };
   }, [open, measure]);
 
   const finish = useCallback((g: Game) => {
     g.over = true;
-    const prevBest = readJSON<number>(KEY_BEST, 0);
-    const isBest = g.score > prevBest;
-    const newBest = Math.max(prevBest, g.score);
-    const days = readJSON<string[]>(KEY_DAYS, []);
-    const today = utcDay();
-    if (!days.includes(today)) days.push(today);
-    const p = readJSON<number>(KEY_PLAYS, 0) + 1;
-    writeJSON(KEY_BEST, newBest);
-    writeJSON(KEY_DAYS, days.slice(-400));
-    writeJSON(KEY_PLAYS, p);
-    setBest(newBest);
-    setStreak(streakOf(days));
-    setPlays(p);
-    setLast({ score: g.score, coins: g.coins, wave: g.wave, isBest, bosses: g.bossKills });
+    const r = recordRun({ score: g.score, wave: g.wave, coins: g.coins, bosses: g.bossKills });
+    setBest(r.progress.best);
+    setStreak(r.progress.streak);
+    setPlays(r.progress.plays);
+    setLast({ score: g.score, coins: g.coins, wave: g.wave, bosses: g.bossKills });
+    setResult(r);
     setPhase("over");
-    try {
-      window.dispatchEvent(new CustomEvent(SCORE_EVENT, { detail: { score: g.score, best: newBest } }));
-    } catch {
-      /* ignore */
-    }
     synth.current?.beep(220, 0.5, "sawtooth", 0.04, -180);
   }, []);
 
@@ -297,13 +233,12 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
       g.hurt = 0.6;
       g.shake = 0.35;
       s?.beep(110, 0.25, "sawtooth", 0.05, -60);
-      burst(g.px, g.py, PINK, 16, 90);
+      burst(g.px, g.py, ORANGE, 16, 90);
       if (g.hp <= 0) finish(g);
     };
 
     const update = (dt: number) => {
       const { W, H } = g;
-      // player movement
       const speed = 170;
       let dx = 0;
       if (g.left) dx -= 1;
@@ -323,7 +258,6 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
         g.bannerText = `WAVE ${g.wave}`;
         s?.beep(660, 0.12, "square", 0.04, 300);
         if (g.wave % 4 === 0 && !g.boss) {
-          // THE ENTITY breaches: the emblem itself, drawn from the bitmap
           const cell = 2;
           const max = 14 + g.wave * 2;
           g.boss = { x: W / 2, y: -SIGIL_H * cell, w: SIGIL_W * cell, h: SIGIL_H * cell, cell, hp: max, max, t: 0, hit: 0, dir: 1, dropT: 2 };
@@ -358,7 +292,7 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
               g.bossKills += 1;
               g.score += Math.round(2500 * (1 + (g.wave - 1) * 0.25));
               burst(b.x, b.y, SIGIL_COLOR, 60, 160);
-              burst(b.x, b.y, "#ffffff", 20, 90);
+              burst(b.x, b.y, CREAM, 20, 90);
               for (let i = 0; i < 4; i++) g.drops.push({ x: b.x + rnd(-24, 24), y: b.y + rnd(-10, 10), vy: 44, kind: "coin", t: 0 });
               g.bannerText = "ENTITY DOWN";
               g.banner = 2;
@@ -399,7 +333,7 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
           x: rnd(sz, W - sz), y: -sz, s: sz,
           vy: (big ? 26 : 42) + g.wave * 7 + rnd(0, 18),
           hp: big ? 3 : 1, max: big ? 3 : 1,
-          color: [PINK, CYAN, PURPLE, GREEN][Math.floor(Math.random() * 4)],
+          color: big ? BLUE : [ORANGE, BLUE, YELLOW, CREAM][Math.floor(Math.random() * 4)],
           seed: Math.random() * 1000, sway: rnd(-18, 18),
         });
       }
@@ -422,7 +356,6 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
         e.y += e.vy * dt;
         e.x += Math.sin(g.t * 2 + e.seed) * e.sway * dt;
         e.x = Math.max(e.s / 2, Math.min(W - e.s / 2, e.x));
-        // shot hits
         for (const sh of g.shots) {
           if (Math.abs(sh.x - e.x) < e.s / 2 + 1 && Math.abs(sh.y - e.y) < e.s / 2 + 2) {
             sh.y = -99;
@@ -442,14 +375,12 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
             }
           }
         }
-        // player hit
         if (e.y < H + 500 && Math.abs(e.x - g.px) < (e.s + g.pw) / 2 - 3 && Math.abs(e.y - g.py) < (e.s + g.ph) / 2 - 4) {
           e.y = H + 999;
           hurt();
         } else if (e.y > H + 500) {
           /* already dead */
         } else if (e.y - e.s / 2 > H) {
-          // reached the floor — a leak costs a life
           e.y = H + 999;
           hurt();
         }
@@ -471,7 +402,7 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
           } else {
             g.power = 8;
             s?.beep(392, 0.3, "square", 0.04, 500);
-            burst(d.x, d.y, GREEN, 14, 80);
+            burst(d.x, d.y, YELLOW, 14, 80);
           }
         }
       }
@@ -493,21 +424,18 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
       if (g.shake > 0) ctx.translate(Math.round(rnd(-2, 2)), Math.round(rnd(-2, 2)));
       ctx.fillStyle = BG;
       ctx.fillRect(-4, -4, W + 8, H + 8);
-      // starfield (parallax drift)
       for (const st of g.stars) {
         const y = (st.y + g.t * 18 * st.z) % H;
-        ctx.globalAlpha = 0.25 + st.z * 0.5;
+        ctx.globalAlpha = 0.2 + st.z * 0.45;
         ctx.fillStyle = st.c;
         ctx.fillRect(Math.round(st.x), Math.round(y), 1, 1);
       }
       ctx.globalAlpha = 1;
-      // floor line
-      ctx.fillStyle = "#2a1848";
+      ctx.fillStyle = "#3a3556";
       ctx.fillRect(0, H - 10, W, 1);
-      ctx.fillStyle = "#1a0f2e";
+      ctx.fillStyle = FLOOR;
       ctx.fillRect(0, H - 9, W, 9);
 
-      // drops
       for (const d of g.drops) {
         const img = d.kind === "coin" ? sprites.current.coin : sprites.current.power;
         const bob = Math.sin(d.t * 6) * 1.5;
@@ -516,12 +444,11 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
           const w = Math.round((img.naturalWidth / img.naturalHeight) * h);
           ctx.drawImage(img, Math.round(d.x - w / 2), Math.round(d.y - h / 2 + bob), w, h);
         } else {
-          ctx.fillStyle = d.kind === "coin" ? YELLOW : GREEN;
+          ctx.fillStyle = d.kind === "coin" ? YELLOW : ORANGE;
           ctx.fillRect(Math.round(d.x - 5), Math.round(d.y - 5 + bob), 10, 10);
         }
       }
 
-      // enemies: glitch blocks
       for (const e of g.enemies) {
         const half = e.s / 2;
         const jx = Math.random() < 0.08 ? Math.round(rnd(-2, 2)) : 0;
@@ -535,7 +462,6 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
         ctx.fillStyle = BG;
         ctx.fillRect(x + 2, y + 2, e.s - 4, e.s - 4);
         ctx.fillStyle = e.color;
-        // inner glyph: scrambled bits
         const cell = Math.max(2, Math.floor((e.s - 6) / 3));
         for (let i = 0; i < 3; i++)
           for (let j = 0; j < 3; j++) {
@@ -543,21 +469,19 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
             if (on) ctx.fillRect(x + 3 + i * cell, y + 3 + j * cell, cell - 1, cell - 1);
           }
         if (e.max > 1) {
-          // hp pips for the big ones
           for (let i = 0; i < e.hp; i++) {
-            ctx.fillStyle = "#ffffff";
+            ctx.fillStyle = CREAM;
             ctx.fillRect(x + 1 + i * 4, y - 4, 3, 2);
           }
         }
       }
 
-      // the Entity
       if (g.boss) {
         const b = g.boss;
         const x0 = Math.round(b.x - b.w / 2);
         const y0 = Math.round(b.y - b.h / 2);
         const flick = b.hit > 0;
-        ctx.fillStyle = flick ? "#ffffff" : SIGIL_COLOR;
+        ctx.fillStyle = flick ? CREAM : SIGIL_COLOR;
         for (let r = 0; r < SIGIL_H; r++) {
           const row = SIGIL_ROWS[r];
           const jx = !flick && Math.random() < 0.05 ? (Math.random() < 0.5 ? -1 : 1) : 0;
@@ -565,40 +489,36 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
             if (row[c] === "#") ctx.fillRect(x0 + c * b.cell + jx, y0 + r * b.cell, b.cell, b.cell);
           }
         }
-        // hp bar
-        ctx.fillStyle = "#1a0f2e";
+        ctx.fillStyle = FLOOR;
         ctx.fillRect(W / 2 - 30, 24, 60, 3);
         ctx.fillStyle = SIGIL_COLOR;
         ctx.fillRect(W / 2 - 30, 24, Math.round(60 * (b.hp / b.max)), 3);
       }
 
-      // shots
       for (const sh of g.shots) {
-        ctx.fillStyle = g.power > 0 ? GREEN : CYAN;
+        ctx.fillStyle = g.power > 0 ? YELLOW : CREAM;
         ctx.fillRect(Math.round(sh.x) - 1, Math.round(sh.y) - 4, 2, 6);
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(Math.round(sh.x) - 1, Math.round(sh.y) - 1, 2, 2);
       }
 
-      // player
       const img = sprites.current.char;
       const flicker = g.hurt > 0 && Math.floor(g.t * 20) % 2 === 0;
       if (!flicker) {
         if (g.power > 0) {
           ctx.globalAlpha = 0.35 + 0.25 * Math.sin(g.t * 12);
-          ctx.fillStyle = GREEN;
+          ctx.fillStyle = YELLOW;
           ctx.fillRect(Math.round(g.px - g.pw / 2 - 2), Math.round(g.py - g.ph / 2 - 2), g.pw + 4, g.ph + 4);
           ctx.globalAlpha = 1;
         }
         if (img) {
           ctx.drawImage(img, Math.round(g.px - g.pw / 2), Math.round(g.py - g.ph / 2), g.pw, g.ph);
         } else {
-          ctx.fillStyle = PURPLE;
+          ctx.fillStyle = ORANGE;
           ctx.fillRect(Math.round(g.px - g.pw / 2), Math.round(g.py - g.ph / 2), g.pw, g.ph);
         }
       }
 
-      // particles
       for (const p of g.parts) {
         ctx.globalAlpha = Math.max(0, p.life / p.max);
         ctx.fillStyle = p.color;
@@ -609,32 +529,31 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
       // HUD
       ctx.font = font(7);
       ctx.textBaseline = "top";
-      ctx.fillStyle = PINK;
+      ctx.fillStyle = CREAM;
       ctx.textAlign = "left";
       ctx.fillText(pad(g.score), 4, 4);
       for (let i = 0; i < 3; i++) {
-        ctx.fillStyle = i < g.hp ? PINK : "#2a1848";
+        ctx.fillStyle = i < g.hp ? ORANGE : FLOOR;
         ctx.fillRect(4 + i * 7, 14, 5, 3);
       }
       ctx.textAlign = "right";
       ctx.fillStyle = YELLOW;
       ctx.fillText(`W${g.wave}`, W - 4, 4);
-      ctx.fillStyle = YELLOW;
       ctx.fillText(`Z${g.coins}`, W - 4, 14);
       if (g.power > 0) {
-        ctx.fillStyle = GREEN;
+        ctx.fillStyle = YELLOW;
         ctx.fillRect(W / 2 - 20, 5, Math.round(40 * (g.power / 8)), 2);
       }
       if (g.banner > 0 && !g.over) {
         ctx.textAlign = "center";
         ctx.globalAlpha = Math.min(1, g.banner * 2);
-        ctx.fillStyle = CYAN;
+        ctx.fillStyle = g.bannerText.startsWith("ENTITY") ? SIGIL_COLOR : BLUE;
         ctx.font = font(10);
         ctx.fillText(g.bannerText, W / 2, H / 2 - 20);
         ctx.globalAlpha = 1;
       }
       if (g.paused) {
-        ctx.fillStyle = "rgba(10,6,16,0.7)";
+        ctx.fillStyle = "rgba(20,18,34,0.72)";
         ctx.fillRect(0, 0, W, H);
         ctx.textAlign = "center";
         ctx.fillStyle = YELLOW;
@@ -642,7 +561,7 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
         ctx.fillText("PAUSED", W / 2, H / 2 - 6);
       }
       if (g.hurt > 0.45) {
-        ctx.fillStyle = "rgba(255,45,123,0.18)";
+        ctx.fillStyle = "rgba(255,78,26,0.18)";
         ctx.fillRect(0, 0, W, H);
       }
       ctx.restore();
@@ -658,6 +577,7 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
     synth.current.resume();
     gameRef.current = makeGame(dims.W, dims.H);
     setPaused(false);
+    setResult(null);
     setPhase("play");
     synth.current.beep(523, 0.08, "square", 0.04, 300);
   }, [dims.W, dims.H, muted]);
@@ -710,7 +630,6 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
     };
   }, [open, phase, start, close]);
 
-  // Pointer: drag anywhere on the field to steer.
   const pointerTo = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const g = gameRef.current;
     const c = canvasRef.current;
@@ -737,42 +656,28 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
 
   if (!open) return null;
 
-  const label: React.CSSProperties = { fontFamily: "var(--font-press-start)" };
-  const btn = "px-4 py-2 border-2 text-[8px] sm:text-[9px] tracking-[0.2em] uppercase cursor-pointer transition active:scale-[0.97]";
+  const hud: React.CSSProperties = { fontFamily: "var(--font-press-start)" };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-[2px] px-3"
-      role="dialog"
-      aria-label="ZEREBLAST arcade game"
-    >
-      <div className="relative flex flex-col items-center gap-2" style={{ width: dims.cssW }}>
-        {/* top bar */}
-        <div className="w-full flex items-center justify-between" style={label}>
-          <span className="text-[6px] sm:text-[7px] tracking-[0.25em]" style={{ color: YELLOW }}>
-            ZEREBLAST
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-3" style={{ background: "rgba(21,19,26,0.82)" }} role="dialog" aria-label="ZEREBLAST cartridge" aria-modal="true">
+      <div className="relative flex flex-col items-center gap-3" style={{ width: dims.cssW }}>
+        {/* console top bar */}
+        <div className="w-full flex items-center justify-between" style={hud}>
+          <span className="flex items-center gap-2 text-[8px] tracking-[0.22em]" style={{ color: "var(--cream)" }}>
+            <Bolt size={10} color="var(--yellow)" /> ZEREBLAST
           </span>
           <div className="flex items-center gap-2">
-            <button onClick={toggleMute} className="text-[6px] sm:text-[7px] tracking-[0.2em] cursor-pointer" style={{ color: muted ? "#8b8b9e" : GREEN }} aria-label={muted ? "Unmute" : "Mute"}>
+            <button onClick={toggleMute} className="btn btn-sm" style={{ background: muted ? "var(--cream-3)" : "var(--yellow)", padding: "7px 10px", fontSize: 7 }} aria-label={muted ? "Unmute" : "Mute"}>
               {muted ? "SND OFF" : "SND ON"}
             </button>
-            <button onClick={close} className="text-[6px] sm:text-[7px] tracking-[0.2em] cursor-pointer" style={{ color: PINK }} aria-label="Close game">
-              ESC
+            <button onClick={close} className="btn btn-sm" style={{ background: "var(--orange)", padding: "7px 10px", fontSize: 7 }} aria-label="Eject and close">
+              EJECT
             </button>
           </div>
         </div>
 
         {/* screen */}
-        <div
-          className="relative overflow-hidden border-2"
-          style={{
-            width: dims.cssW,
-            height: dims.cssH,
-            borderColor: "#2a1848",
-            boxShadow: `0 0 0 1px ${BG}, 0 0 28px rgba(180,77,255,.25), inset 0 0 40px rgba(0,0,0,.6)`,
-            background: BG,
-          }}
-        >
+        <div className="screen relative overflow-hidden" style={{ width: dims.cssW, height: dims.cssH }}>
           <canvas
             ref={canvasRef}
             width={dims.W}
@@ -782,31 +687,23 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
             className="block touch-none select-none"
             style={{ width: dims.cssW, height: dims.cssH, imageRendering: "pixelated" }}
           />
-          {/* CRT scanlines */}
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{ background: "repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px)", mixBlendMode: "multiply" }}
-            aria-hidden="true"
-          />
 
           {phase !== "play" && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-4" style={{ background: "rgba(10,6,16,.78)", ...label }}>
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-4" style={{ background: "rgba(20,18,34,.86)", ...hud }}>
               {phase === "title" ? (
                 <>
-                  <div className="text-[12px] sm:text-[16px] tracking-[0.2em]" style={{ color: PINK, textShadow: `0 0 12px ${PINK}` }}>
-                    ZEREBLAST
-                  </div>
-                  <div className="text-[6px] sm:text-[7px] leading-relaxed tracking-[0.15em]" style={{ color: "#8b8b9e" }}>
-                    GLITCH BLOCKS ARE BREACHING THE ARCADE.
+                  <span className="wordmark" style={{ fontSize: "clamp(26px, 6vw, 44px)" }}>ZEREBLAST</span>
+                  <div className="text-[6px] sm:text-[7px] leading-[1.9] tracking-[0.15em]" style={{ color: "var(--cream)" }}>
+                    GLITCH BLOCKS ARE BREACHING THE FIELD.
                     <br />
                     BLAST THEM. GRAB THE Z COINS. 3 LIVES.
                     <br />
                     EVERY 4TH WAVE THE ENTITY BREACHES.
                   </div>
-                  <button onClick={start} className={`${btn} coin-blink`} style={{ borderColor: YELLOW, color: YELLOW, ...label }}>
-                    Press Start
+                  <button onClick={start} className="btn btn-primary" style={{ fontSize: 9, padding: "12px 18px" }}>
+                    PRESS START
                   </button>
-                  <div className="text-[5px] sm:text-[6px] tracking-[0.15em]" style={{ color: CYAN }}>
+                  <div className="text-[5px] sm:text-[6px] leading-[1.9] tracking-[0.15em]" style={{ color: MUTED }}>
                     ARROWS / A D TO MOVE · AUTO-FIRE · P PAUSE
                     <br />
                     TOUCH: DRAG TO STEER
@@ -814,20 +711,21 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
                 </>
               ) : (
                 <>
-                  <div className="text-[11px] sm:text-[14px] tracking-[0.2em]" style={{ color: PINK, textShadow: `0 0 12px ${PINK}` }}>
+                  <div className="text-[12px] sm:text-[15px] tracking-[0.2em]" style={{ color: ORANGE }}>
                     GAME OVER
                   </div>
-                  <div className="text-[9px] sm:text-[11px] tracking-[0.15em]" style={{ color: YELLOW }}>
+                  <div className="text-[11px] sm:text-[14px] tracking-[0.15em]" style={{ color: YELLOW }}>
                     {pad(last.score)}
                   </div>
-                  <div className="text-[6px] sm:text-[7px] tracking-[0.15em]" style={{ color: last.isBest ? GREEN : "#8b8b9e" }}>
-                    {last.isBest ? "NEW HIGH SCORE" : `HIGH SCORE ${pad(best)}`}
+                  <div className="text-[6px] sm:text-[7px] tracking-[0.15em]" style={{ color: result?.isBest ? YELLOW : MUTED }}>
+                    {result?.isBest ? "NEW HIGH SCORE" : `HIGH SCORE ${pad(best)}`}
                   </div>
-                  <div className="text-[5px] sm:text-[6px] tracking-[0.15em]" style={{ color: CYAN }}>
+                  <div className="text-[5px] sm:text-[6px] tracking-[0.15em]" style={{ color: BLUE }}>
                     WAVE {last.wave} · {last.coins} Z COIN{last.coins === 1 ? "" : "S"}{last.bosses ? ` · ${last.bosses} ENTIT${last.bosses === 1 ? "Y" : "IES"} DOWN` : ""}
                   </div>
-                  <button onClick={start} className={btn} style={{ borderColor: GREEN, color: GREEN, ...label }}>
-                    Continue?
+                  {result && <RunSummary r={result} />}
+                  <button onClick={start} className="btn btn-primary" style={{ fontSize: 9, padding: "12px 18px" }}>
+                    CONTINUE?
                   </button>
                 </>
               )}
@@ -835,17 +733,17 @@ export default function BlastGame({ open, onClose }: { open: boolean; onClose: (
           )}
         </div>
 
-        {/* bottom strip: honest local records */}
-        <div className="w-full flex items-center justify-between text-[5px] sm:text-[6px] tracking-[0.18em]" style={{ ...label, color: "#8b8b9e" }}>
+        {/* console bottom strip: honest local records */}
+        <div className="w-full flex items-center justify-between text-[6px] sm:text-[7px] tracking-[0.18em]" style={{ ...hud, color: "var(--cream)" }}>
           <span>
             HI <span style={{ color: YELLOW }}>{pad(best)}</span>
           </span>
           <span>
-            DAILY STREAK <span style={{ color: GREEN }}>{streak}</span> · PLAYS <span style={{ color: CYAN }}>{plays}</span>
+            STREAK <span style={{ color: ORANGE }}>{streak}</span> · RUNS <span style={{ color: BLUE }}>{plays}</span>
           </span>
         </div>
-        <div className="w-full text-center text-[4px] sm:text-[5px] tracking-[0.14em]" style={{ ...label, color: "#5a5a6e" }}>
-          RECORDS LIVE IN THIS BROWSER ONLY. {paused ? "PAUSED." : ""} REWARDS FOR DAILY PLAYERS ARE CLAIMED ON-CHAIN AT LAUNCH.
+        <div className="w-full text-center text-[5px] sm:text-[6px] tracking-[0.14em]" style={{ ...hud, color: MUTED }}>
+          RECORDS LIVE IN THIS BROWSER ONLY. {paused ? "PAUSED." : ""} ESC EJECTS.
         </div>
       </div>
     </div>

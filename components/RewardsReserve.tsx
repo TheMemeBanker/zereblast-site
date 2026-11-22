@@ -1,23 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 
 /**
- * $ZEREBRO rewards reserve — the balance is fetched LIVE from the chain on
- * every page load, never hardcoded, so the panel can only ever show what the
- * wallet actually holds. Solscan link lets anyone verify independently.
+ * $ZEREBRO rewards reserve. The balance is fetched LIVE from the chain on every
+ * page load and never hardcoded, so the panel can only show what the wallet
+ * holds. The Solscan link is there so anyone can check it independently.
  */
 const RESERVE_WALLET = "BZfRPexCoXMsFLvbYqn8C4PvTLH5KRaxpsFHynMTGQoN";
-// The wallet's ZEREBRO token account (deterministic for wallet+mint, so it
-// stays valid across balance changes). Public RPCs now 403 the indexed
-// getTokenAccountsByOwner from browsers, but plain getAccountInfo on the
-// token account passes — hence the pre-derived address.
+// The wallet's ZEREBRO token account (deterministic for wallet+mint). Public
+// RPCs 403 browser getTokenAccountsByOwner; plain getAccountInfo passes.
 const RESERVE_TOKEN_ACCOUNT = "5ZurRsJkvFUvK2rxt9pcWBwgUYM7Bk8RCcnqis8sSU6S";
-const RPCS = [
-  "https://solana-rpc.publicnode.com",
-  "https://api.mainnet-beta.solana.com",
-];
+const RPCS = ["https://solana-rpc.publicnode.com", "https://api.mainnet-beta.solana.com"];
 
 function fmt(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
@@ -36,12 +30,7 @@ export default function RewardsReserve() {
           const res = await fetch(rpc, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              jsonrpc: "2.0",
-              id: 1,
-              method: "getAccountInfo",
-              params: [RESERVE_TOKEN_ACCOUNT, { encoding: "jsonParsed" }],
-            }),
+            body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getAccountInfo", params: [RESERVE_TOKEN_ACCOUNT, { encoding: "jsonParsed" }] }),
             signal: AbortSignal.timeout(8000),
           });
           if (!res.ok) continue;
@@ -52,7 +41,7 @@ export default function RewardsReserve() {
             return;
           }
         } catch {
-          /* try the next RPC; panel still renders with the verify link */
+          /* next RPC; the panel still renders with the verify link */
         }
       }
     })();
@@ -62,28 +51,22 @@ export default function RewardsReserve() {
   }, []);
 
   return (
-    <motion.a
-      href={`https://solscan.io/account/${RESERVE_WALLET}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 0.85 }}
-      transition={{ delay: 4.5, duration: 1 }}
-      className="absolute bottom-12 sm:bottom-14 left-1/2 -translate-x-1/2 z-30 px-3 py-1.5 border border-[#39ff14]/25 bg-black/40 backdrop-blur-[2px] hover:border-[#39ff14]/60 transition-colors"
-      title="Verify the rewards reserve on Solscan"
-    >
-      <div
-        className="text-[5px] sm:text-[6px] tracking-[0.18em] text-center text-[#39ff14]/80"
-        style={{ fontFamily: "var(--font-press-start)" }}
-      >
-        REWARDS RESERVE{balance !== null ? `: ${fmt(balance)} $ZEREBRO` : ": VERIFY ON-CHAIN"}
+    <div className="card" style={{ padding: "clamp(18px, 3vw, 28px)", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 20, alignItems: "center" }}>
+      <div>
+        <div className="eyebrow">REWARDS RESERVE · LIVE ON-CHAIN</div>
+        <div className="display" style={{ fontSize: "clamp(30px, 5vw, 54px)", marginTop: 8, color: "var(--cobalt)" }}>
+          {balance !== null ? `${fmt(balance)} $ZEREBRO` : "VERIFY ON-CHAIN"}
+        </div>
+        <p style={{ margin: "10px 0 0", fontSize: 15, lineHeight: 1.5, color: "var(--ink-2)", maxWidth: 520 }}>
+          Set aside for $ZEREBLAST holders and daily players, claimed on-chain at game launch. The number above is read from the wallet every time this page loads. It is a plan, not a guarantee.
+        </p>
       </div>
-      <div
-        className="mt-1 text-[4px] sm:text-[5px] tracking-[0.14em] text-center text-[#8b8b9e]"
-        style={{ fontFamily: "var(--font-press-start)" }}
-      >
-        FOR $ZEREBLAST HOLDERS + DAILY PLAYERS AT GAME LAUNCH
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "flex-start" }}>
+        <a className="btn btn-sm" href={`https://solscan.io/account/${RESERVE_WALLET}`} target="_blank" rel="noopener noreferrer">
+          VERIFY ON SOLSCAN
+        </a>
+        <div className="hud" style={{ fontSize: 7, letterSpacing: ".14em", color: "var(--muted)", wordBreak: "break-all" }}>{RESERVE_WALLET}</div>
       </div>
-    </motion.a>
+    </div>
   );
 }

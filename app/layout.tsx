@@ -1,43 +1,28 @@
-import type { Metadata } from "next";
-import { Inter, Press_Start_2P } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Bungee, Inter, Press_Start_2P } from "next/font/google";
 import "./globals.css";
-import SecretCode from "@/components/SecretCode";
-import CaTicker from "@/components/CaTicker";
 
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
-
-const pressStart = Press_Start_2P({
-  variable: "--font-press-start",
-  weight: "400",
-  subsets: ["latin"],
-});
+const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
+const bungee = Bungee({ variable: "--font-bungee", weight: "400", subsets: ["latin"] });
+const pressStart = Press_Start_2P({ variable: "--font-press-start", weight: "400", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "zereblast.org",
-  description: "The arcade never closed. It evolved.",
+  title: "ZEREBLAST",
+  description: "A pocket arcade cartridge. Blast the glitch, clear the daily missions, climb the ranks.",
   openGraph: {
-    title: "zereblast.org",
-    description: "The arcade never closed. It evolved.",
-    siteName: "zereblast.org",
+    title: "ZEREBLAST",
+    description: "A pocket arcade cartridge. Blast the glitch, clear the daily missions, climb the ranks.",
+    siteName: "ZEREBLAST",
     type: "website",
   },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export const viewport: Viewport = { themeColor: "#F3EDE0" };
+
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${pressStart.variable}`}>
-      <body>
-        {children}
-        <SecretCode />
-        <CaTicker />
-      </body>
+    <html lang="en" className={`${inter.variable} ${bungee.variable} ${pressStart.variable}`}>
+      <body>{children}</body>
     </html>
   );
 }
