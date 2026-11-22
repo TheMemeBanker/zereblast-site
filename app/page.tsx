@@ -8,7 +8,7 @@ import HowToPlay from "@/components/HowToPlay";
 import RewardsReserve from "@/components/RewardsReserve";
 import BlastGame from "@/components/BlastGame";
 import { PUMP_URL } from "@/components/ca";
-import TokenPanel from "@/components/TokenPanel";
+import TokenPanel, { CaChip } from "@/components/TokenPanel";
 
 const WRAP: React.CSSProperties = { width: "min(1120px, 100% - 32px)", margin: "0 auto" };
 
@@ -78,6 +78,9 @@ export default function Home() {
           </div>
           <div className="hud" style={{ fontSize: 8, letterSpacing: ".18em", color: "var(--muted)", marginTop: 22 }}>
             KEYBOARD OR TOUCH · NO ACCOUNT · NO DOWNLOAD
+          </div>
+          <div style={{ marginTop: 18 }}>
+            <CaChip />
           </div>
         </div>
         <div style={{ display: "flex", justifyContent: "center", padding: "10px 16px 16px 0" }}>
@@ -182,6 +185,10 @@ export default function Home() {
         <div className="hud" style={{ display: "flex", flexWrap: "wrap", gap: 18, fontSize: 8, letterSpacing: ".18em" }}>
           <a href="https://x.com/0xzerebro" target="_blank" rel="noopener noreferrer" style={{ color: "var(--ink)" }}>@0XZEREBRO</a>
           <a href="https://zerebro.org/" target="_blank" rel="noopener noreferrer" style={{ color: "var(--ink)" }}>ZEREBRO.ORG</a>
+        </div>
+        <div style={{ width: "100%" }}>
+          <div className="eyebrow" style={{ marginBottom: 8 }}>CA</div>
+          <CaChip />
         </div>
         <div className="hud" style={{ fontSize: 7, letterSpacing: ".16em", color: "var(--muted)", width: "100%" }}>
           ZEREBLAST 2026 · RECORDS LIVE IN THIS BROWSER ONLY · REWARDS ARE A PLAN, NOT A GUARANTEE

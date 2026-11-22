@@ -64,3 +64,25 @@ export default function TokenPanel() {
     </div>
   );
 }
+
+/** Compact "CA" chip: label + full address, click to copy. Renders nothing while the CA is empty. */
+export function CaChip({ dark = false }: { dark?: boolean }) {
+  const [copied, setCopied] = useState(false);
+  if (!CA) return null;
+  const copy = () => {
+    try {
+      void navigator.clipboard?.writeText(CA);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* selectable on screen */
+    }
+  };
+  const fg = dark ? "var(--cream)" : "var(--ink)";
+  return (
+    <button type="button" onClick={copy} className="hud" title="Click to copy the contract address" aria-label="Copy the contract address" style={{ display: "inline-flex", alignItems: "stretch", maxWidth: "100%", border: `2px solid ${fg}`, background: "transparent", color: fg, cursor: "pointer", padding: 0, textAlign: "left" }}>
+      <span style={{ display: "flex", alignItems: "center", padding: "8px 10px", background: copied ? "var(--yellow)" : "var(--orange)", color: "var(--ink)", fontSize: 8, letterSpacing: ".2em", borderRight: `2px solid ${fg}` }}>{copied ? "COPIED" : "CA"}</span>
+      <span style={{ display: "flex", alignItems: "center", padding: "8px 10px", fontSize: 8, letterSpacing: ".1em", wordBreak: "break-all", lineHeight: 1.6 }}>{CA}</span>
+    </button>
+  );
+}
