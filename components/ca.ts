@@ -6,5 +6,5 @@
  * footer wordmark into the token link. Verify a new mint on-chain + DexScreener
  * before changing this.
  */
-export const CA = ""; // unlinked 2026-11-22 21:4x CT (operator: new CA coming); C3WQcDZryE4eR3KAtwuPAk8F1vL4Yi7AHCUjwA2cpump retired
+export const CA = "FLuBStU8k1VySaKYNksBJ6WvYqZhWaUZkXva3EYcpump"; // verified on-chain 2026-11-22 ~21:50 CT: Token-2022 ZEREBLAST.ORG/ZEREBLAST, 6 dec, 1B supply, mint+freeze+update authority revoked (replaces C3WQcDZr…pump)
 export const PUMP_URL = CA ? `https://pump.fun/coin/${CA}` : "";
